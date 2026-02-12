@@ -5,7 +5,8 @@ MAC_ADDR="18:3F:70:BB:2A:87"
 PA_CARD="bluez_card.18_3F_70_BB_2A_87"
 
 # 1. Notificación de inicio
-notify-send -u critical "📞 Meeting Mode" "Reiniciando conexión..."
+notify-send -u normal "Airpods meeting mode" "Working..."
+
 
 # 2. CONEXIÓN BASE
 rfkill unblock bluetooth
@@ -31,8 +32,8 @@ sleep 2
 # --- FASE 3: CONFIGURACIÓN DE AUDIO (Forzar todo) ---
 
 # Buscamos los nombres técnicos del nuevo perfil HFP
-NEW_SINK=$(pactl list sinks short | grep "$PA_CARD" | awk '{print $2}' | head -n 1)
-NEW_SOURCE=$(pactl list sources short | grep "$PA_CARD" | awk '{print $2}' | head -n 1)
+NEW_SINK=$(pactl list sinks short | grep "18_3F_70_BB_2A_87" | awk '{print $2}' | head -n 1)
+NEW_SOURCE=$(pactl list sources short | grep "18_3F_70_BB_2A_87" | grep -v "monitor" | awk '{print $2}' | head -n 1)
 
 # CONFIGURAR SALIDA (LO QUE ESCUCHAS)
 if [ -n "$NEW_SINK" ]; then
@@ -58,8 +59,8 @@ if [ -n "$NEW_SOURCE" ]; then
     # SUBIR VOLUMEN DEL MICRO AL 100% (Importante para clones)
     pactl set-source-volume "$NEW_SOURCE" 100%
     
-    notify-send -u normal "📞 Meeting Mode" "✅ Micro ACTIVO y Audio redirigido."
+    notify-send -u normal "Airpods Meeting Mode" "Connected"
 else
     # Si falla, avisamos
-    notify-send -u critical "ERROR" "No se encontró el micrófono.\nIntenta pulsar de nuevo."
+    notify-send -u normal "Airpods Meeting Mode" "Airpods microphone not found. Please check connection."
 fi

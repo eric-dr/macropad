@@ -6,7 +6,7 @@ MAC_ADDR="18:3F:70:BB:2A:87"
 PA_CARD="bluez_card.18_3F_70_BB_2A_87"
 
 # 1. Notify User
-notify-send -u low "🎧 Music Mode" "Connecting..."
+notify-send -u normal "Airpods music mode" "Working..."
 
 # 2. Unblock and Connect
 rfkill unblock bluetooth
@@ -29,8 +29,8 @@ if bluetoothctl connect "$MAC_ADDR"; then
         pactl set-default-sink "$SINK_NAME"
     fi
 
-    notify-send -u normal "🎧 Music Mode" "✅ AirPods de Èric connected.\n$STATUS"
+    notify-send -u normal "Airpods Music Mode" "AirPods de Èric connected."
 
 else
-    notify-send -u critical "🎧 Music Mode" "❌ AirPods de Èric connection failed.\nCheck power."
+    notify-send -u normal "Airpods Music Mode" "AirPods de Èric connection failed."
 fi

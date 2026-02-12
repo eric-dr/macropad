@@ -5,6 +5,8 @@
 # Si en tu lista anterior sale escrito distinto (ej: "USB_2.0"), cámbialo aquí.
 SINK_KEYWORD="USB2.0"
 
+notify-send -u normal "Sanyun speakers" "Working..."
+
 # 1. BUSCAR NOMBRE TÉCNICO
 # grep -i ignora mayúsculas/minúsculas
 NEW_SINK=$(pactl list sinks short | grep -i "$SINK_KEYWORD" | awk '{print $2}' | head -n 1)
@@ -26,7 +28,7 @@ if [ -n "$NEW_SINK" ]; then
     # Desmutear
     pactl set-sink-mute "$NEW_SINK" 0
     
-    notify-send -u normal "🔊 Altavoces USB" "✅ Conectado a: USB 2.0 Device"
+    notify-send -u normal "🔊 Altavoces USB" "Conectado a: USB 2.0 Device"
 else
-    notify-send -u critical "🔊 Error USB" "❌ No se encuentra 'USB2.0 Device'.\nRevisa el nombre con 'pactl list sinks short'"
+    notify-send -u normal "🔊 Error USB" "No se encuentra 'USB2.0 Device'.\nRevisa el nombre con 'pactl list sinks short'"
 fi

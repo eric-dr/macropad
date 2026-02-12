@@ -6,6 +6,8 @@
 SINK_KEYWORD="pci"    # Para los altavoces
 SOURCE_KEYWORD="pci"  # Para el micro interno
 
+notify-send -u normal "Built in speakers" "Working..."
+
 # 1. BUSCAR LOS NOMBRES TÉCNICOS
 # Buscamos el primer dispositivo que coincida con "pci" y "analog"
 NEW_SINK=$(pactl list sinks short | grep "$SINK_KEYWORD" | grep "analog" | awk '{print $2}' | head -n 1)
@@ -25,9 +27,9 @@ if [ -n "$NEW_SINK" ]; then
     pactl set-sink-mute "$NEW_SINK" 0
     pactl set-sink-volume "$NEW_SINK" 50%
     
-    MSG_OUT="🔊 Altavoces PC"
+    MSG_OUT="Altavoces PC"
 else
-    MSG_OUT="❌ Altavoces no encontrados"
+    MSG_OUT="Altavoces no encontrados"
 fi
 
 # 3. CONFIGURAR ENTRADA (MICRO INTERNO)
@@ -40,9 +42,9 @@ if [ -n "$NEW_SOURCE" ]; then
     done
     
     pactl set-source-mute "$NEW_SOURCE" 0
-    MSG_IN="🎙️ Micro Interno"
+    MSG_IN="Micro Interno"
 else
-    MSG_IN="❌ Micro no encontrado"
+    MSG_IN="Micro no encontrado"
 fi
 
 # 4. NOTIFICACIÓN

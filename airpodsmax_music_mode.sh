@@ -8,7 +8,7 @@ MAC_ADDR="0A:E1:68:C3:3E:8A"
 PA_CARD="bluez_card.0A_E1_68_C3_3E_8A"
 
 # 1. Notificar usuario
-notify-send -u low "🎧 Music Mode" "Conectando..."
+notify-send -u normal "AirpodsMax music mode" "Working..."
 
 # 2. Desbloquear y Conectar
 rfkill unblock bluetooth
@@ -46,8 +46,8 @@ if bluetoothctl connect "$MAC_ADDR"; then
         done
     fi
 
-    notify-send -u normal "🎧 Music Mode" "Airpods MAx Connected: $MAC_ADDR\n$STATUS"
+    notify-send -u normal "AirpodsMax Music Mode" "Airpods Max Connected."
 
 else
-    notify-send -u critical "🎧 Music Mode" "Unable to connect Airpods Max"
+    notify-send -u normal "AirpodsMax Music Mode" "Unable to connect Airpods Max."
 fi
