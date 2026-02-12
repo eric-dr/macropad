@@ -34,7 +34,7 @@ if bluetoothctl connect "$MAC_ADDR"; then
     fi
 
     # 4. Establecer como Salida Predeterminada y Mover Audio
-    SINK_NAME=$(pactl list sinks short | grep "$PA_CARD" | awk '{print $2}' | head -n 1)
+    SINK_NAME=$(pactl list sinks short | grep "0A_E1_68_C3_3E_8A" | awk '{print $2}' | head -n 1)
     
     if [ -n "$SINK_NAME" ]; then
         # Poner como default

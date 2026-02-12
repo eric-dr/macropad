@@ -24,9 +24,14 @@ if bluetoothctl connect "$MAC_ADDR"; then
     fi
 
     # 4. Set as Default Output
-    SINK_NAME=$(pactl list sinks short | grep "$PA_CARD" | awk '{print $2}' | head -n 1)
+    SINK_NAME=$(pactl list sinks short | grep "18_3F_70_BB_2A_87" | awk '{print $2}' | head -n 1)
     if [ -n "$SINK_NAME" ]; then
         pactl set-default-sink "$SINK_NAME"
+        
+        # Mover lo que esté sonando ahora mismo (Spotify, Chrome...) a los cascos
+        pactl list short sink-inputs | awk '{print $1}' | while read stream_id; do
+            pactl move-sink-input "$stream_id" "$SINK_NAME"
+        done
     fi
 
     notify-send -u normal "Airpods Music Mode" "AirPods de Èric connected."
