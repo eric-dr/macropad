@@ -1,53 +1,66 @@
 #!/bin/bash
 
 # --- CONFIGURACIÓN ---
-# Dirección MAC detectada (0A:E1:68:C3:3E:8A)
 MAC_ADDR="0A:E1:68:C3:3E:8A"
-
-# Nombre de la tarjeta para PulseAudio (MAC con barras bajas en vez de dos puntos)
 PA_CARD="bluez_card.0A_E1_68_C3_3E_8A"
 
-# 1. Notificar usuario
-notify-send -u normal "AirpodsMax music mode" "Working..."
+notify-send -u normal "AirpodsMax" "Connecting Music Mode..."
 
-# 2. Desbloquear y Conectar
+# 1. LIMPIEZA PREVIA (CRUCIAL PARA EVITAR BUSY)
 rfkill unblock bluetooth
-
-# Intentamos confiar primero por si acaso
+# Forzamos parada de escaneo (silenciando errores)
+bluetoothctl scan off > /dev/null 2>&1
+# Desconectamos por si se quedó a medias
+bluetoothctl disconnect "$MAC_ADDR" > /dev/null 2>&1
+# Aseguramos confianza
 bluetoothctl trust "$MAC_ADDR" > /dev/null 2>&1
 
-if bluetoothctl connect "$MAC_ADDR"; then
-    
-    # Esperamos a que Ubuntu registre el dispositivo de audio
-    sleep 4
+# 2. BUCLE DE CONEXIÓN (INTENTAR 3 VECES)
+connected=false
+for i in {1..3}; do
+    echo "Intento $i..."
+    if bluetoothctl connect "$MAC_ADDR"; then
+        connected=true
+        break
+    fi
+    # Si falla, esperamos un poco antes de reintentar
+    sleep 2
+done
 
-    # 3. Forzar Perfil de Alta Fidelidad (A2DP)
-    # Probamos las variantes por si tu Ubuntu usa AAC o SBC
+# 3. SI SE CONECTÓ, CONFIGURAMOS AUDIO
+if [ "$connected" = true ]; then
+    
+    # Esperamos a que PulseAudio reconozca la tarjeta
+    sleep 5
+
+    # Forzar Perfil A2DP (Probando variantes)
     if pactl set-card-profile "$PA_CARD" a2dp_sink; then
-        STATUS="Perfil: A2DP (Estándar)"
+        STATUS="A2DP (Std)"
     elif pactl set-card-profile "$PA_CARD" a2dp_sink_aac; then
-        STATUS="Perfil: A2DP (AAC)"
+        STATUS="A2DP (AAC)"
     elif pactl set-card-profile "$PA_CARD" a2dp_sink_sbc; then
-        STATUS="Perfil: A2DP (SBC)"
+        STATUS="A2DP (SBC)"
     else
-        STATUS="(No se pudo forzar A2DP)"
+        STATUS="(Audio Std)"
     fi
 
-    # 4. Establecer como Salida Predeterminada y Mover Audio
+    # Buscar el nombre del Sink
     SINK_NAME=$(pactl list sinks short | grep "0A_E1_68_C3_3E_8A" | awk '{print $2}' | head -n 1)
     
     if [ -n "$SINK_NAME" ]; then
         # Poner como default
         pactl set-default-sink "$SINK_NAME"
         
-        # Mover lo que esté sonando ahora mismo (Spotify, Chrome...) a los cascos
+        # Mover audio activo
         pactl list short sink-inputs | awk '{print $1}' | while read stream_id; do
             pactl move-sink-input "$stream_id" "$SINK_NAME"
         done
+        notify-send -u normal "AirpodsMax" "✅ Connected ($STATUS)."
+    else
+        notify-send -u critical "AirpodsMax" "⚠️ Connected but Audio sink not found."
     fi
 
-    notify-send -u normal "AirpodsMax Music Mode" "Airpods Max Connected."
-
 else
-    notify-send -u normal "AirpodsMax Music Mode" "Unable to connect Airpods Max."
+    # Si fallaron los 3 intentos
+    notify-send -u critical "AirpodsMax" "❌ Unable to connect (Busy/Timeout).\nCheck phone bluetooth."
 fi
