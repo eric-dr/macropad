@@ -78,7 +78,7 @@ if [ "$connected" = true ]; then
         
         notify-send -u normal "AirpodsMax Meeting" "✅ Connected with MIC.\n$STATUS"
     else
-        notify-send -u critical "AirpodsMax Meeting" "⚠️ Connected but Microphone not found."
+        notify-send -u normal "AirpodsMax Meeting" "⚠️ Connected but Microphone not found."
     fi
 
 else

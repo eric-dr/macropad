@@ -4,34 +4,39 @@
 MAC_ADDR="0A:E1:68:C3:3E:8A"
 PA_CARD="bluez_card.0A_E1_68_C3_3E_8A"
 
-notify-send -u normal "AirpodsMax" "Connecting Music Mode..."
-
-# 1. LIMPIEZA PREVIA (CRUCIAL PARA EVITAR BUSY)
+# 1. LIMPIEZA NUCLEAR
+notify-send -u low "AirpodsMax" "Borrando registro anterior..."
 rfkill unblock bluetooth
-# Forzamos parada de escaneo (silenciando errores)
 bluetoothctl scan off > /dev/null 2>&1
-# Desconectamos por si se quedó a medias
 bluetoothctl disconnect "$MAC_ADDR" > /dev/null 2>&1
-# Aseguramos confianza
+bluetoothctl remove "$MAC_ADDR" > /dev/null 2>&1
+
+# Damos tiempo al sistema para limpiar la caché
+sleep 2
+
+# 2. EMPAREJAMIENTO POR FUERZA BRUTA
+notify-send -u normal "AirpodsMax" "Emparejando desde cero..."
+# Usamos el comando mágico que te ha funcionado (-t 0)
+sudo btmgmt pair -c 3 -t 0 "$MAC_ADDR"
+
+# 3. CONFIAR Y BUCLE DE CONEXIÓN
 bluetoothctl trust "$MAC_ADDR" > /dev/null 2>&1
 
-# 2. BUCLE DE CONEXIÓN (INTENTAR 3 VECES)
 connected=false
 for i in {1..3}; do
-    echo "Intento $i..."
+    echo "Intento de conexión $i..."
     if bluetoothctl connect "$MAC_ADDR"; then
         connected=true
         break
     fi
-    # Si falla, esperamos un poco antes de reintentar
     sleep 2
 done
 
-# 3. SI SE CONECTÓ, CONFIGURAMOS AUDIO
+# 4. SI SE CONECTÓ, CONFIGURAMOS AUDIO
 if [ "$connected" = true ]; then
     
     # Esperamos a que PulseAudio reconozca la tarjeta
-    sleep 5
+    sleep 2
 
     # Forzar Perfil A2DP (Probando variantes)
     if pactl set-card-profile "$PA_CARD" a2dp_sink; then
@@ -57,10 +62,10 @@ if [ "$connected" = true ]; then
         done
         notify-send -u normal "AirpodsMax" "✅ Connected ($STATUS)."
     else
-        notify-send -u critical "AirpodsMax" "⚠️ Connected but Audio sink not found."
+        notify-send -u normal "AirpodsMax" "⚠️ Connected but Audio sink not found."
     fi
 
 else
-    # Si fallaron los 3 intentos
-    notify-send -u critical "AirpodsMax" "❌ Unable to connect (Busy/Timeout).\nCheck phone bluetooth."
+    # Si fallaron los intentos
+    notify-send -u normal "AirpodsMax" "❌ Unable to connect.\n¿Estaban parpadeando?"
 fi
