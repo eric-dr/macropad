@@ -1,41 +1,40 @@
 #!/bin/bash
 
-# --- CONFIGURATION ---
-MAC_ADDR="18:3F:70:BB:2A:87"
-# PulseAudio uses underscores instead of colons for card names
-PA_CARD="bluez_card.18_3F_70_BB_2A_87"
+MAC="18:3F:70:BB:2A:87"
+CARD="bluez_card.18_3F_70_BB_2A_87"
 
-# 1. Notify User
-notify-send -u normal "Airpods music mode" "Working..."
+notify-send -u normal "AirPods" "Setting Music Mode"
 
-# 2. Unblock and Connect
-rfkill unblock bluetooth
-if bluetoothctl connect "$MAC_ADDR"; then
-    
-    # Wait for Ubuntu to register the device audio
-    sleep 4
+# 1. Conexión forzada con reintento rápido (máximo 5 segundos)
+if ! bluetoothctl info "$MAC" | grep -q "Connected: yes"; then
+    for i in {1..10}; do
+        bluetoothctl connect "$MAC" > /dev/null 2>&1
+        sleep 0.5
+        if bluetoothctl info "$MAC" | grep -q "Connected: yes"; then break; fi
+    done
+fi
 
-    # 3. Force High Fidelity Profile (A2DP)
-    # WARNING: This disables the microphone
-    if pactl set-card-profile "$PA_CARD" a2dp_sink; then
-        STATUS="Profile: High Fidelity (A2DP)"
-    else
-        STATUS="(Could not force A2DP)"
-    fi
+# 2. Reset agresivo del perfil para liberar el micro (imprescindible en 24.04)
+pactl set-card-profile "$CARD" off 2>/dev/null
+pactl set-card-profile "$CARD" a2dp-sink-sbc 2>/dev/null || pactl set-card-profile "$CARD" a2dp-sink 2>/dev/null
 
-    # 4. Set as Default Output
-    SINK_NAME=$(pactl list sinks short | grep "18_3F_70_BB_2A_87" | awk '{print $2}' | head -n 1)
-    if [ -n "$SINK_NAME" ]; then
-        pactl set-default-sink "$SINK_NAME"
-        
-        # Mover lo que esté sonando ahora mismo (Spotify, Chrome...) a los cascos
-        pactl list short sink-inputs | awk '{print $1}' | while read stream_id; do
-            pactl move-sink-input "$stream_id" "$SINK_NAME"
-        done
-    fi
+# 3. Bucle de espera inteligente para el dispositivo de salida (Sink)
+SINK_NAME=""
+for i in {1..20}; do
+    SINK_NAME=$(pactl list sinks short | grep -i "18_3F_70_BB_2A_87" | awk '{print $2}' | head -n 1)
+    if [ -n "$SINK_NAME" ]; then break; fi
+    sleep 0.1
+done
 
-    notify-send -u normal "Airpods Music Mode" "AirPods de Èric connected."
-
+# 4. Configuración final
+if [ -n "$SINK_NAME" ]; then
+    pactl set-default-sink "$SINK_NAME"
+    # Mover audio activo
+    pactl list short sink-inputs | awk '{print $1}' | while read id; do
+        pactl move-sink-input "$id" "$SINK_NAME" 2>/dev/null
+    done
+    pactl set-sink-volume "$SINK_NAME" 60%
+    notify-send -u normal "AirPods" "Music Mode Active"
 else
-    notify-send -u normal "Airpods Music Mode" "AirPods de Èric connection failed."
+    notify-send -u normal "AirPods" "Error: Sink not found"
 fi

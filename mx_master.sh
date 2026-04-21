@@ -1,21 +1,16 @@
 #!/bin/bash
 
-# --- CONFIGURACIÓN ---
-# Convertimos la MAC a mayúsculas por si acaso, aunque suele dar igual
-MAC_ADDR="CE:A8:DD:E4:97:CF"
+MAC_ADDR="CE:A8:DD:E4:97:D0"
 
-# 1. Notificación discreta de inicio
-notify-send -u low "🖱️ MX Master" "Connecting..."
-
-# 2. Asegurar que el Bluetooth está activo
+echo "1. Asegurando antena Bluetooth..."
 rfkill unblock bluetooth
 
-# 3. Intentar conectar
-# Si el comando devuelve 0 (éxito), entra en el 'then'.
-# Si devuelve error (1), entra en el 'else'.
+echo "2. Intentando conectar al MX Master ($MAC_ADDR)..."
+# Hemos quitado el > /dev/null 2>&1 para ver qué dice el ordenador
 if bluetoothctl connect "$MAC_ADDR"; then
-    notify-send -u normal "🖱️ MX Master" "Connected!"
+    echo "✅ CONECTADO CON ÉXITO"
+    notify-send -u normal "🖱️ MX Master" "✅ Connected!"
 else
-    # El mensaje específico que pediste para recordarte mirar debajo del ratón
-    notify-send -u critical "🖱️ Error" "Are you setting the connection nº3?"
+    echo "❌ FALLO AL CONECTAR"
+    notify-send -u normal "🖱️ Error" "Unable to connect.\nAre you setting the connection nº3?"
 fi
