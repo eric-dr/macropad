@@ -4,74 +4,69 @@ This repository contains a collection of Bash scripts and configurations designe
 
 ## 1. Required Dependencies
 
-Install these packages to enable window management, audio control, terminal customization, and hardware support.
+Install these packages to enable window management, audio control, and terminal customization.
 
 COMMANDS:
 sudo apt update
 sudo apt install terminator python3-nautilus wmctrl xdotool pulseaudio-utils -y
 sudo apt install bluez libspa-0.2-bluetooth -y
 sudo apt install gnome-shell-extension-manager -y
-sudo apt install libcamhal-ipu6 libcamhal-ipu6-common v4l2-relayd intel-vsc-firmware -y
 
 CRITICAL: For the "Focusing" feature (bringing windows to the front) to work properly, you must log in using Ubuntu on Xorg. Click the gear icon (⚙️) on the login screen before entering your password.
 
 ---
 
-## 2. Discovery: Finding your Device Info
+## 2. Final Custom Shortcuts (Mapping Table)
 
-Use these commands to identify your hardware IDs and update the scripts:
+Configure these in "Settings -> Keyboard -> View and Customize Shortcuts -> Custom Shortcuts".
 
-A. Find Bluetooth MAC Addresses:
-bluetoothctl devices
-(Radar mode for clones): sudo btmgmt find -l | grep -B 1 "rssi -[2-5][0-9]"
-
-B. Find Window Classes (For App Focusing):
-wmctrl -lx
-(Look at the third column, e.g., spotify.Spotify)
-
-C. Find Audio Sink Names:
-pactl list sinks short
-
----
-
-## 3. Audio Management Scripts
-
-Optimized for PipeWire (Ubuntu 24.04) with polling loops for near-instant switching.
-
-- Music Mode (airpods_music.sh): Forces A2DP Sink (SBC). Resets profile to off first to clear stuck processes.
-- Meeting Mode (airpods_meeting.sh): Forces Headset Unit (mSBC) for HD Voice. Redirects Teams/Zoom streams.
-- Built-in Audio (built_in_speakers.sh): Switches audio to the internal PCI soundcard.
-- USB Audio (sanyun_speakers.sh): Routes to "USB 2.0 Device" (Sanyun speakers).
+| Function | Shortcut | Command |
+| :--- | :--- | :--- |
+| **Spotify** | Ctrl + Alt + S | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/open_or_focus.sh spotify spotify |
+| **YouTube** | Ctrl + Alt + Y | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/open_or_focus.sh YouTubeApp "google-chrome --user-data-dir=/home/eric.domingo@local.eurecat.org/.chrome-youtube-macro --class=YouTubeApp --app=https://www.youtube.com --ozone-platform=x11" |
+| **Portal ERP** | Ctrl + Alt + P | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/open_or_focus.sh "Problem loading page|Serveis i gestions personals" /snap/bin/firefox --new-window "https://eurecaterp.local.eurecat.org/EmployeeServices/Enterprise%20Portal/default.aspx?&WDPK=initial&WMI=EPPersonalInformation&redirected=1&WCMP=ecat&WMI=EPPersonalInformation" |
+| **AirPods Music** | Ctrl + Alt + X | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/airpods_music_mode.sh |
+| **AirPods Meeting** | Ctrl + Alt + Z | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/airpods_meeting_mode.sh |
+| **Sanyun USB Spk** | Ctrl + Alt + N | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/sanyun_speakers.sh |
+| **Built-in Spk** | Ctrl + Alt + B | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/built_in_speakers.sh |
+| **Toggle Mic** | Ctrl + Alt + I | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/toggle_mic.sh |
+| **Legend Toggle** | Ctrl + Alt + M | /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/toggle_image.sh |
 
 ---
 
-## 4. Intelligent App Focusing
+## 3. Portal ERP & Firefox Setup
 
-The open_or_focus.sh script prevents duplicate windows.
+To ensure the Portal ERP script works correctly, the following conditions must be met:
 
-- Spotify (Ctrl + Alt + S): Keyword 'spotify'. Uses DBus Present signal.
-- YouTube (Ctrl + Alt + Y): Keyword 'YouTubeApp'. Dedicated Chrome profile.
-- Eurecat ERP (Ctrl + Alt + P): Keyword 'EurecatERP'. App Mode profile.
-
----
-
-## 5. System Utilities
-
-- Mouse Connection (mx_master.sh): Connection for MX Master 3 (MAC: CE:A8:DD:E4:97:D3).
-- Global Mic Mute (toggle_mic.sh): Toggles default mic with "NORMAL" notifications.
-- Button Legend Overlay (toggle_image.sh): Toggle to show/hide macropad_legend.png.
+1. **Firefox Snap:** The script explicitly calls `/snap/bin/firefox`. Ensure Firefox is installed via Snap (default in Ubuntu 24.04) and any other versions (like Firefox-ESR) are removed to avoid window detection conflicts.
+2. **VPN Requirement:** The portal is an internal resource. You **must be connected to the Eurecat VPN** to see the actual content ("Serveis i gestions personals").
+3. **Window Logic:** The script is designed to handle both the "Problem loading page" (offline/no VPN) and the active portal titles. It will focus the existing window in either case instead of opening duplicates.
 
 ---
 
-## 6. Setup & Folders
+## 4. Audio & Hardware Logic
 
-1. Place scripts in: ~/Documents/oof_projects/macropad/
-2. Set permissions: chmod +x ~/Documents/oof_projects/macropad/*.sh
-3. Configure Shortcuts: Settings -> Keyboard -> Custom Shortcuts.
-4. Terminator as Default:
-   sudo update-alternatives --config x-terminal-emulator
-   gsettings set org.gnome.desktop.default-applications.terminal exec 'terminator'
-5. YouTube AdBlock: Run "google-chrome --user-data-dir=/home/$USER/.chrome-youtube-macro" once and install uBlock Origin.
+### AirPods Max (clones) - MAC: 18:3F:70:BB:2A:87
+The scripts are optimized for PipeWire.
+- **Music Mode:** Forces A2DP Sink (SBC Codec). It resets the profile to 'off' first to clear any stuck processes.
+- **Meeting Mode:** Forces Headset Unit (mSBC Codec) for HD Voice.
+
+### Speaker Routing
+- **Sanyun:** Targets "USB 2.0 Device" and moves active audio streams immediately.
+- **Built-in:** Switches audio back to the internal soundcard and default microphone.
+
+---
+
+## 5. Setup & Maintenance
+
+1. **Scripts Directory:** Save all scripts in `/home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/`.
+2. **Permissions:** Run `chmod +x /home/eric.domingo@local.eurecat.org/Documents/oof_projects/macropad/*.sh`.
+3. **Terminator:**
+   - Set as default: `sudo update-alternatives --config x-terminal-emulator`.
+   - Right-click fix: Install `python3-nautilus` and place the `terminator.py` script in `~/.local/share/nautilus-python/extensions/`.
+4. **YouTube AdBlock:** Run the dedicated profile once and install **uBlock Origin**:
+   `google-chrome --user-data-dir=/home/eric.domingo@local.eurecat.org/.chrome-youtube-macro`
+5. **GNOME Extensions:** Install "Focus My Window" to skip the "Window is ready" notification.
 
 ---
 Maintained by: Eric Domingo

@@ -1,32 +1,28 @@
 #!/bin/bash
 
-# $1 = Keyword (spotify, YouTubeApp)
-# $2 = Command to launch the app
-
+# $1 = Palabras clave separadas por | (ej: "Error|Portal")
+# $2... = Comando para lanzar la app
 KEYWORD="$1"
-COMMAND="$2"
+shift
+COMMAND="$@"
 
-# 1. SPECIAL CASE FOR SPOTIFY (Snap version)
-if [[ "$KEYWORD" == "spotify" ]]; then
-    # Use DBus to tell Spotify to "Present" its window (Works even if minimized)
-    dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Spotify.Present > /dev/null 2>&1
-    
-    # Wait a bit and try to force focus with xdotool/wmctrl as backup
-    WINDOW_ID=$(wmctrl -l | grep -i "Spotify" | awk '{print $1}' | head -n 1)
-    if [ -n "$WINDOW_ID" ]; then
-        wmctrl -i -a "$WINDOW_ID"
-        xdotool windowactivate "$WINDOW_ID"
-        exit 0
-    fi
+# 1. Buscamos la ventana usando Expresión Regular Extendida (-E) 
+# Esto permite buscar "Palabra1|Palabra2"
+# Buscamos en el título (-l) excluyendo la propia terminal
+WINDOW_ID=$(wmctrl -l | grep -Ei "$KEYWORD" | grep -ivE "terminator|terminal|open_or_focus" | awk '{print $1}' | head -n 1)
+
+# 2. Si no hay ID, probamos buscando por la Clase (para Spotify/YouTube)
+if [ -z "$WINDOW_ID" ]; then
+    WINDOW_ID=$(wmctrl -lx | grep -Ei "$KEYWORD" | awk '{print $1}' | head -n 1)
 fi
 
-# 2. GENERAL CASE (YouTube and others)
-WINDOW_ID=$(wmctrl -lx | grep -i "$KEYWORD" | awk '{print $1}' | head -n 1)
-
+# 3. Lógica de acción
 if [ -n "$WINDOW_ID" ]; then
+    echo "Ventana encontrada ($WINDOW_ID). Enfocando..."
     wmctrl -i -a "$WINDOW_ID"
     xdotool windowactivate "$WINDOW_ID"
 else
-    # Launch if not found
-    nohup $COMMAND > /dev/null 2>&1 &
+    echo "No encontrado. Lanzando: $COMMAND"
+    # Ejecutamos el comando en segundo plano de forma independiente
+    setsid $COMMAND > /dev/null 2>&1 &
 fi
