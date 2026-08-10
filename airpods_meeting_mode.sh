@@ -3,7 +3,7 @@
 MAC="18:3F:70:BB:2A:87"
 CARD="bluez_card.18_3F_70_BB_2A_87"
 
-notify-send -u normal "AirPods" "Setting Meeting Mode"
+notify-send -u normal "AirPods" "Setting Meeting Mode (Starting Silenced)"
 
 # 1. Conexión forzada
 if ! bluetoothctl info "$MAC" | grep -q "Connected: yes"; then
@@ -28,11 +28,15 @@ for i in {1..20}; do
     sleep 0.1
 done
 
-# 4. Configuración final
+# 4. Configuración final con BLINDAJE DE SILENCIO
 if [ -n "$SOURCE_NAME" ]; then
     pactl set-default-sink "$SINK_NAME"
     pactl set-default-source "$SOURCE_NAME"
-    pactl set-source-volume "$SOURCE_NAME" 100%
+    
+    # --- BLOQUEO DE SEGURIDAD INICIAL ---
+    pactl set-source-mute "$SOURCE_NAME" 1    # Activar Mute
+    pactl set-source-volume "$SOURCE_NAME" 0% # Bajar volumen a cero
+    # ------------------------------------
     
     # Mover audio de salida y de entrada (llamadas activas)
     pactl list short sink-inputs | awk '{print $1}' | while read id; do
@@ -42,7 +46,7 @@ if [ -n "$SOURCE_NAME" ]; then
         pactl move-source-output "$id" "$SOURCE_NAME" 2>/dev/null
     done
     
-    notify-send -u normal "AirPods" "Meeting Mode Active"
+    notify-send -u normal "AirPods" "Meeting Mode Active - MIC PROTECTED"
 else
     notify-send -u normal "AirPods" "Error: Microphone not found"
 fi
