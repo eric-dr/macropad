@@ -1,52 +1,72 @@
 #!/bin/bash
 
 MAC="18:3F:70:BB:2A:87"
-CARD="bluez_card.18_3F_70_BB_2A_87"
+# Formateamos la MAC para que coincida con lo que busca PipeWire (puntos o guiones)
+MAC_CLEAN=$(echo $MAC | tr ':' '.')
+MAC_SNAKE=$(echo $MAC | tr ':' '_')
 
-notify-send -u normal "AirPods" "Setting Meeting Mode (Starting Silenced)"
+notify-send -u normal "AirPods" "Meeting Mode: Connecting..."
 
-# 1. Conexión forzada
+# 1. Asegurar Conexión Bluetooth
 if ! bluetoothctl info "$MAC" | grep -q "Connected: yes"; then
-    for i in {1..10}; do
-        bluetoothctl connect "$MAC" > /dev/null 2>&1
-        sleep 0.5
-        if bluetoothctl info "$MAC" | grep -q "Connected: yes"; then break; fi
-    done
+    bluetoothctl connect "$MAC" > /dev/null 2>&1
+    sleep 3
 fi
 
-# 2. Estabilización y cambio a Micrófono
-pactl set-card-profile "$CARD" a2dp-sink-sbc 2>/dev/null
-pactl set-card-profile "$CARD" headset-head-unit-msbc 2>/dev/null || pactl set-card-profile "$CARD" handsfree_head_unit 2>/dev/null
-
-# 3. Bucle de espera inteligente para Salida (Sink) y Entrada (Source)
-SINK_NAME=""
-SOURCE_NAME=""
+# 2. BUCLE DE ESPERA PARA LA TARJETA (CARD)
+# Esperamos hasta 10 segundos a que la tarjeta aparezca en PipeWire
+CARD_ID=""
 for i in {1..20}; do
-    SINK_NAME=$(pactl list sinks short | grep -i "18_3F_70_BB_2A_87" | awk '{print $2}' | head -n 1)
-    SOURCE_NAME=$(pactl list sources short | grep -i "18_3F_70_BB_2A_87" | grep -v "monitor" | awk '{print $2}' | head -n 1)
-    if [ -n "$SINK_NAME" ] && [ -n "$SOURCE_NAME" ]; then break; fi
-    sleep 0.1
+    CARD_ID=$(pactl list cards short | grep -iE "$MAC_CLEAN|$MAC_SNAKE" | awk '{print $1}')
+    if [ -n "$CARD_ID" ]; then break; fi
+    sleep 0.5
 done
 
-# 4. Configuración final con BLINDAJE DE SILENCIO
+if [ -z "$CARD_ID" ]; then
+    notify-send -u normal "AirPods" "❌ Error: Audio Card not found"
+    exit 1
+fi
+
+# 3. CAMBIO DE PERFIL
+# Primero forzamos OFF para limpiar el canal
+pactl set-card-profile "$CARD_ID" off > /dev/null 2>&1
+sleep 0.5
+
+# Intentamos activar el micrófono
+if pactl set-card-profile "$CARD_ID" headset-head-unit-msbc 2>/dev/null; then
+    MODE="HD Voice"
+elif pactl set-card-profile "$CARD_ID" headset-head-unit 2>/dev/null; then
+    MODE="Standard"
+else
+    notify-send -u normal "AirPods" "❌ Error: Microphone profile failed"
+    exit 1
+fi
+
+# 4. BÚSQUEDA DE SINK (Audio) Y SOURCE (Micro)
+SINK_NAME=""
+SOURCE_NAME=""
+for i in {1..15}; do
+    SINK_NAME=$(pactl list sinks short | grep -i "$MAC_SNAKE" | awk '{print $2}' | head -n 1)
+    SOURCE_NAME=$(pactl list sources short | grep "bluez_input" | grep -i "$MAC_SNAKE" | awk '{print $2}' | head -n 1)
+    if [ -n "$SOURCE_NAME" ]; then break; fi
+    sleep 0.3
+done
+
+# 5. CONFIGURACIÓN FINAL
 if [ -n "$SOURCE_NAME" ]; then
     pactl set-default-sink "$SINK_NAME"
     pactl set-default-source "$SOURCE_NAME"
     
-    # --- BLOQUEO DE SEGURIDAD INICIAL ---
-    pactl set-source-mute "$SOURCE_NAME" 1    # Activar Mute
-    pactl set-source-volume "$SOURCE_NAME" 0% # Bajar volumen a cero
-    # ------------------------------------
+    # SILENCIO INICIAL (Seguridad)
+    pactl set-source-mute "$SOURCE_NAME" 1
+    pactl set-source-volume "$SOURCE_NAME" 0%
     
-    # Mover audio de salida y de entrada (llamadas activas)
-    pactl list short sink-inputs | awk '{print $1}' | while read id; do
-        pactl move-sink-input "$id" "$SINK_NAME" 2>/dev/null
-    done
+    # Mover llamadas de Teams
     pactl list short source-outputs | awk '{print $1}' | while read id; do
         pactl move-source-output "$id" "$SOURCE_NAME" 2>/dev/null
     done
     
-    notify-send -u normal "AirPods" "Meeting Mode Active - MIC PROTECTED"
+    notify-send -u normal "AirPods" "✅ Meeting Ready ($MODE)\nMic Silenced"
 else
-    notify-send -u normal "AirPods" "Error: Microphone not found"
+    notify-send -u normal "AirPods" "❌ Mic not found after profile switch"
 fi
